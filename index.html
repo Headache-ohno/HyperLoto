@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HyperLoto Research HTML</title>
+  <title>HyperLoto V5 Research Full</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', system-ui, sans-serif; }
     .glass { backdrop-filter: blur(14px); background: rgba(255,255,255,0.08); }
-    .ball { width: 3.25rem; height: 3.25rem; }
+    .ball { width: 3.2rem; height: 3.2rem; }
+    .heat-cell { aspect-ratio: 1 / 1; }
     @media (min-width: 768px) { .ball { width: 4rem; height: 4rem; } }
-    .heat { aspect-ratio: 1/1; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 999px; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.2),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_26%),linear-gradient(180deg,_#020617,_#0f172a)]">
+<body class="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_26%),radial-gradient(circle_at_bottom,_rgba(244,114,182,0.10),_transparent_24%),linear-gradient(180deg,_#020617,_#0f172a)]">
   <div class="max-w-7xl mx-auto px-4 py-6 md:py-8">
     <header class="glass border border-white/10 rounded-3xl shadow-2xl p-5 md:p-7 mb-6">
       <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
@@ -23,12 +25,13 @@
           <div class="flex items-center gap-3 mb-2">
             <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-2xl">🧪</div>
             <div>
-              <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">HyperLoto Research HTML</h1>
-              <p class="text-sm md:text-base text-slate-300">研究用途全部盛りのブラウザ版</p>
+              <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">HyperLoto V5 Research Full</h1>
+              <p class="text-sm md:text-base text-slate-300">研究UI + Worker Pool + MonteCarlo + GA + Portfolio + Heatmap</p>
             </div>
           </div>
           <p class="text-xs md:text-sm text-slate-400 leading-relaxed max-w-4xl">
-            頻度・直近・gap・セット推定・共起グラフ・MonteCarlo・GA・ポートフォリオ生成をブラウザでまとめて扱います。
+            頻度・直近・gap・セット推定・共起解析を前処理し、MonteCarlo・GA・ポートフォリオ生成を Worker Pool で並列実行します。
+            重い処理はブラウザの別スレッドへ分配します。
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -40,7 +43,7 @@
 
     <section class="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 mb-6">
       <div class="glass border border-white/10 rounded-3xl p-5 md:p-6 shadow-xl">
-        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">データと研究設定</h2>
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">研究設定</h2>
         <div class="flex flex-wrap gap-3 mb-4">
           <label class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-500 hover:bg-indigo-400 transition text-white font-semibold cursor-pointer">
             CSVをアップロード
@@ -49,6 +52,7 @@
           <button id="sample-data-button" class="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 transition text-white font-semibold">サンプルデータ</button>
           <button id="run-button" class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 transition text-slate-950 font-semibold">研究実行</button>
           <button id="light-button" class="px-4 py-2 rounded-2xl bg-sky-500 hover:bg-sky-400 transition text-slate-950 font-semibold">軽量設定</button>
+          <button id="export-button" class="px-4 py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 transition text-white font-semibold">結果CSV出力</button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -68,17 +72,27 @@
               <label class="text-sm text-slate-300 block mb-2">直近分析ウィンドウ</label>
               <select id="recent-window" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
                 <option value="10">10回</option>
-                <option value="20" selected>20回</option>
-                <option value="30">30回</option>
+                <option value="20">20回</option>
+                <option value="30" selected>30回</option>
                 <option value="50">50回</option>
               </select>
             </div>
             <div>
               <label class="text-sm text-slate-300 block mb-2">MonteCarlo回数</label>
               <select id="monte-iterations" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
-                <option value="1000">1,000</option>
-                <option value="3000">3,000</option>
-                <option value="10000" selected>10,000</option>
+                <option value="10000">10,000</option>
+                <option value="30000">30,000</option>
+                <option value="50000" selected>50,000</option>
+                <option value="100000">100,000</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">ポートフォリオ口数</label>
+              <select id="portfolio-size" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="100">100</option>
+                <option value="200">200</option>
+                <option value="500" selected>500</option>
+                <option value="1000">1000</option>
               </select>
             </div>
           </div>
@@ -87,29 +101,28 @@
             <div>
               <label class="text-sm text-slate-300 block mb-2">GA 個体数</label>
               <select id="ga-population" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
-                <option value="40">40</option>
-                <option value="80" selected>80</option>
+                <option value="80">80</option>
                 <option value="120">120</option>
+                <option value="200" selected>200</option>
+                <option value="300">300</option>
               </select>
             </div>
             <div>
               <label class="text-sm text-slate-300 block mb-2">GA 世代数</label>
               <select id="ga-generations" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
-                <option value="20">20</option>
-                <option value="40" selected>40</option>
+                <option value="40">40</option>
                 <option value="60">60</option>
+                <option value="100" selected>100</option>
+                <option value="150">150</option>
               </select>
             </div>
             <div>
-              <label class="text-sm text-slate-300 block mb-2">ポートフォリオ口数</label>
-              <select id="portfolio-size" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
-                <option value="10">10</option>
-                <option value="50">50</option>
-                <option value="100" selected>100</option>
-                <option value="200">200</option>
-                <option value="500">500</option>
-                <option value="1000">1000</option>
-              </select>
+              <label class="text-sm text-slate-300 block mb-2">Worker数</label>
+              <select id="worker-count" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100"></select>
+            </div>
+            <div class="rounded-2xl bg-slate-800/80 border border-white/10 p-3">
+              <div class="text-xs text-slate-400">CPU情報</div>
+              <div id="cpu-info" class="text-sm text-white font-semibold">取得中...</div>
             </div>
           </div>
         </div>
@@ -131,14 +144,15 @@
           <div class="text-sm font-semibold text-white mb-2">実行状況</div>
           <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden"><div id="progress-bar" class="h-full w-0 bg-cyan-400 transition-all duration-300"></div></div>
           <div id="progress-text" class="mt-2 text-xs text-slate-400">0%</div>
+          <div id="status-text" class="mt-2 text-sm text-slate-300">待機中</div>
         </div>
       </div>
     </section>
 
     <div id="initial-view" class="glass border border-white/10 rounded-3xl shadow-xl p-8 md:p-12 text-center mb-6">
-      <div class="text-5xl mb-4">📊</div>
-      <h3 class="text-2xl font-bold text-white mb-2">HyperLoto Research HTML</h3>
-      <p class="text-slate-400">研究実行で統計と最適化をまとめて回します。</p>
+      <div class="text-5xl mb-4">📈</div>
+      <h3 class="text-2xl font-bold text-white mb-2">HyperLoto V5 Research Full</h3>
+      <p class="text-slate-400">研究実行で統計・MonteCarlo・GA・ポートフォリオ生成を回します。</p>
     </div>
 
     <div id="dashboard" class="hidden space-y-6">
@@ -172,8 +186,24 @@
     let lotoType = 'loto7';
     let pastData = [];
     let charts = {};
+    let lastResult = null;
 
     const $ = id => document.getElementById(id);
+
+    const cpuCount = Math.max(2, navigator.hardwareConcurrency || 4);
+    const defaultWorkers = Math.max(1, Math.min(cpuCount - 1, 8));
+
+    function fillWorkerOptions() {
+      $('worker-count').innerHTML = '';
+      for (let i = 1; i <= Math.max(cpuCount, 2); i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${i}`;
+        if (i === defaultWorkers) opt.selected = true;
+        $('worker-count').appendChild(opt);
+      }
+      $('cpu-info').textContent = `${cpuCount} 論理コア / 推奨 Worker ${defaultWorkers}`;
+    }
 
     $('loto6-button').onclick = () => switchLotoType('loto6');
     $('loto7-button').onclick = () => switchLotoType('loto7');
@@ -181,15 +211,19 @@
     $('sample-data-button').onclick = sampleData;
     $('run-button').onclick = runResearch;
     $('light-button').onclick = applyLight;
+    $('export-button').onclick = exportCsv;
 
-    function setProgress(p, text) {
-      $('progress-bar').style.width = `${Math.max(0, Math.min(100, p))}%`;
-      $('progress-text').textContent = text || `${p}%`;
+    function setProgress(p, text, status) {
+      const pct = Math.max(0, Math.min(100, p));
+      $('progress-bar').style.width = `${pct}%`;
+      $('progress-text').textContent = text || `${pct}%`;
+      if (status) $('status-text').textContent = status;
     }
 
     function switchLotoType(type) {
       lotoType = type;
       pastData = [];
+      lastResult = null;
       setButtonStyles();
       updateUI();
     }
@@ -208,18 +242,20 @@
     function getGaPopulation(){ return Number($('ga-population').value); }
     function getGaGenerations(){ return Number($('ga-generations').value); }
     function getPortfolioSize(){ return Number($('portfolio-size').value); }
+    function getWorkerCount(){ return Number($('worker-count').value); }
 
     function applyLight(){
-      $('monte-iterations').value = '3000';
-      $('ga-population').value = '40';
-      $('ga-generations').value = '20';
-      $('portfolio-size').value = '50';
-      setProgress(0, '軽量設定');
+      $('monte-iterations').value = '10000';
+      $('ga-population').value = '80';
+      $('ga-generations').value = '40';
+      $('portfolio-size').value = '100';
+      $('worker-count').value = String(Math.max(1, Math.min(defaultWorkers, 4)));
+      setProgress(0, '軽量設定', '軽量設定を適用しました');
     }
 
     function normalize(arr){
       const min = Math.min(...arr), max = Math.max(...arr);
-      if (!isFinite(min) || !isFinite(max) || max===min) return arr.map(()=>0.5);
+      if (!isFinite(min) || !isFinite(max) || max === min) return arr.map(()=>0.5);
       return arr.map(v=>(v-min)/(max-min));
     }
 
@@ -230,6 +266,7 @@
         encoding: 'Shift_JIS',
         complete: r => {
           pastData = parseRows(r.data);
+          lastResult = null;
           updateUI();
         }
       });
@@ -253,16 +290,17 @@
     function sampleData(){
       const draws = [];
       const hot = lotoType==='loto7' ? [4,8,9,13,18,27,28,32,34,36] : [3,6,10,17,21,24,31,33,37,41];
-      for(let i=0;i<220;i++){
+      for(let i=0;i<240;i++){
         const s = new Set();
         while(s.size < getPickCount()){
           let n = Math.floor(Math.random()*getMaxNum())+1;
           if(Math.random()<0.22) n = hot[Math.floor(Math.random()*hot.length)];
           s.add(n);
         }
-        draws.push({ drawNumber: 2500-i, date: new Date(Date.now()-i*7*24*3600*1000).toLocaleDateString('ja-JP'), numbers:[...s].sort((a,b)=>a-b) });
+        draws.push({ drawNumber: 2600-i, date: new Date(Date.now()-i*7*24*3600*1000).toLocaleDateString('ja-JP'), numbers:[...s].sort((a,b)=>a-b) });
       }
       pastData = draws;
+      lastResult = null;
       updateUI();
     }
 
@@ -272,16 +310,27 @@
       return out;
     }
 
+    function buildPairMatrix(data){
+      const size = getMaxNum() + 1;
+      const m = Array.from({length:size},()=>Array(size).fill(0));
+      data.forEach(d=>{
+        for(let i=0;i<d.numbers.length;i++) for(let j=i+1;j<d.numbers.length;j++){
+          const a = d.numbers[i], b = d.numbers[j];
+          m[a][b]++; m[b][a]++;
+        }
+      });
+      return m;
+    }
+
     function estimateSet(){
       if(lotoType!=='loto7') return null;
       const freq = frequencyCounts(pastData).sort((a,b)=>b.count-a.count);
       const rank = new Map(freq.map((x,i)=>[x.number,i+1]));
-      const scores = Object.entries(SET_BIAS).map(([name,bias])=>{
+      return Object.entries(SET_BIAS).map(([name,bias])=>{
         let s = 0; let c = 0;
         Object.entries(bias).forEach(([num,val])=>{ s += val / ((rank.get(Number(num))||37) + 4); c++; });
         return {name, score:s/c};
       }).sort((a,b)=>b.score-a.score);
-      return scores;
     }
 
     function computeScores(){
@@ -291,23 +340,31 @@
         const idx = pastData.findIndex(d=>d.numbers.includes(i+1));
         return idx===-1 ? pastData.length+10 : idx;
       });
+      const pairMatrix = buildPairMatrix(pastData);
+      const pairStrengthRaw = Array.from({length:getMaxNum()},(_,i)=>pairMatrix[i+1].reduce((a,b)=>a+b,0));
       const setRank = estimateSet();
-      const selectedSet = $('set-selector').value === 'AUTO' ? (setRank?.[0]?.name || 'NONE') : $('set-selector').value;
-      const setVals = Array.from({length:getMaxNum()},(_,i)=> selectedSet !== 'NONE' && SET_BIAS[selectedSet] ? (SET_BIAS[selectedSet][i+1] || 0) : 0);
+      const setChoice = $('set-selector').value === 'AUTO' ? (setRank?.[0]?.name || 'NONE') : $('set-selector').value;
+      const setVals = Array.from({length:getMaxNum()},(_,i)=> setChoice !== 'NONE' && SET_BIAS[setChoice] ? (SET_BIAS[setChoice][i+1] || 0) : 0);
 
       const longNorm = normalize(freq.map(x=>x.count));
       const recentNorm = normalize(recent.map(x=>x.count));
       const gapNorm = normalize(gaps);
+      const pairNorm = normalize(pairStrengthRaw);
       const setNorm = normalize(setVals);
 
-      return Array.from({length:getMaxNum()},(_,i)=>({
-        number:i+1,
-        score: longNorm[i]*0.34 + recentNorm[i]*0.24 + gapNorm[i]*0.18 + setNorm[i]*0.10,
-        long: longNorm[i],
-        recent: recentNorm[i],
-        gap: gapNorm[i],
-        set: setNorm[i]
-      })).sort((a,b)=>b.score-a.score);
+      return {
+        scoreTable: Array.from({length:getMaxNum()},(_,i)=>({
+          number:i+1,
+          score: longNorm[i]*0.34 + recentNorm[i]*0.24 + gapNorm[i]*0.16 + setNorm[i]*0.10 + pairNorm[i]*0.16,
+          long: longNorm[i],
+          recent: recentNorm[i],
+          gap: gapNorm[i],
+          set: setNorm[i],
+          pair: pairNorm[i]
+        })).sort((a,b)=>b.score-a.score),
+        pairMatrix,
+        setRank
+      };
     }
 
     function buildPrediction(scoreTable){
@@ -322,108 +379,160 @@
       return selected.sort((a,b)=>a-b);
     }
 
-    function comboScore(combo, scoreTable){
-      const map = new Map(scoreTable.map(x=>[x.number,x.score]));
-      let s = combo.reduce((a,n)=>a+(map.get(n)||0),0);
+    function comboScore(combo, scoreMap, bands, targets){
+      let s = combo.reduce((a,n)=>a+(scoreMap.get(n)||0),0);
       const odd = combo.filter(n=>n%2===1).length;
       const even = combo.length-odd;
       if(Math.abs(odd-even)>3) s -= 0.25;
-      getBands().forEach((b,idx)=>{ s -= Math.abs(combo.filter(n=>n>=b.min&&n<=b.max).length - getBandTargets()[idx])*0.08; });
+      bands.forEach((b,idx)=>{ s -= Math.abs(combo.filter(n=>n>=b.min&&n<=b.max).length - targets[idx])*0.08; });
       return s;
     }
 
-    function randomCombo(scoreTable, topN){
-      const pool = scoreTable.slice(0, topN).map(x=>x.number);
-      const s = new Set();
-      while(s.size<getPickCount()) s.add(pool[Math.floor(Math.random()*pool.length)]);
-      return [...s].sort((a,b)=>a-b);
+    function buildWorkerCode(){
+      return `
+        self.onmessage = function(e){
+          const msg = e.data;
+          const { task, payload } = msg;
+          const scoreMap = new Map(payload.scoreTable.map(x => [x.number, x.score]));
+          const pool = payload.pool;
+          const pickCount = payload.pickCount;
+          const bands = payload.bands;
+          const targets = payload.targets;
+
+          function comboScore(combo){
+            let s = combo.reduce((a,n)=>a+(scoreMap.get(n)||0),0);
+            const odd = combo.filter(n=>n%2===1).length;
+            const even = combo.length-odd;
+            if(Math.abs(odd-even)>3) s -= 0.25;
+            bands.forEach((b,idx)=>{ s -= Math.abs(combo.filter(n=>n>=b.min&&n<=b.max).length - targets[idx])*0.08; });
+            return s;
+          }
+
+          function randCombo(topN){
+            const p = pool.slice(0, topN);
+            const s = new Set();
+            while(s.size < pickCount){
+              s.add(p[Math.floor(Math.random()*p.length)]);
+            }
+            return [...s].sort((a,b)=>a-b);
+          }
+
+          if(task === 'monte'){
+            const comboCounts = new Map();
+            const numberCounts = new Map();
+            for(let i=1;i<=payload.maxNum;i++) numberCounts.set(i,0);
+            for(let i=0;i<payload.iterations;i++){
+              const combo = randCombo(payload.topN);
+              const key = combo.join('-');
+              comboCounts.set(key, (comboCounts.get(key)||0)+1);
+              combo.forEach(n=>numberCounts.set(n,(numberCounts.get(n)||0)+1));
+              if(i % payload.progressEvery === 0) postMessage({type:'progress', done: payload.progressEvery});
+            }
+            postMessage({type:'done', result:{ combos:[...comboCounts.entries()], numbers:[...numberCounts.entries()] }});
+          }
+
+          if(task === 'ga'){
+            let population = Array.from({length:payload.population},()=>randCombo(payload.topN));
+            for(let g=0; g<payload.generations; g++){
+              const ranked = population.map(combo=>({combo,score:comboScore(combo)})).sort((a,b)=>b.score-a.score);
+              const elites = ranked.slice(0, Math.max(8, Math.floor(payload.population/5))).map(x=>x.combo);
+              const next = [...elites];
+              while(next.length < payload.population){
+                const a = elites[Math.floor(Math.random()*elites.length)];
+                const b = elites[Math.floor(Math.random()*elites.length)];
+                let merged = [...new Set([...a.slice(0,Math.ceil(a.length/2)), ...b.slice(Math.floor(b.length/2))])];
+                while(merged.length < pickCount){
+                  const n = pool[Math.floor(Math.random()*Math.min(pool.length, payload.topN))];
+                  if(!merged.includes(n)) merged.push(n);
+                }
+                merged = merged.slice(0,pickCount).sort((x,y)=>x-y);
+                next.push(merged);
+              }
+              population = next;
+              postMessage({type:'progress', done:1});
+            }
+            const ranked = population.map(combo=>({combo,score:comboScore(combo)})).sort((a,b)=>b.score-a.score);
+            const uniq = new Map();
+            ranked.forEach(item=>{ const k=item.combo.join('-'); if(!uniq.has(k)) uniq.set(k,item); });
+            postMessage({type:'done', result:[...uniq.values()].slice(0,20)});
+          }
+
+          if(task === 'portfolio'){
+            const out = new Map();
+            while(out.size < payload.count && out.size < payload.maxAttempts){
+              const combo = randCombo(payload.topN);
+              out.set(combo.join('-'), { combo, score: comboScore(combo) });
+              if(out.size % payload.progressEvery === 0) postMessage({type:'progress', done: payload.progressEvery});
+            }
+            const ranked = [...out.values()].sort((a,b)=>b.score-a.score).slice(0,payload.count);
+            postMessage({type:'done', result: ranked});
+          }
+        };
+      `;
     }
 
-    function monteCarlo(scoreTable){
-      const counts = new Map();
+    async function runWorkerPool(task, basePayload, unitsTotal, unitSplitter) {
+      const workerCount = Math.max(1, getWorkerCount());
+      const code = buildWorkerCode();
+      const blob = new Blob([code], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      const chunks = unitSplitter(workerCount);
+      let progressDone = 0;
+      const results = [];
+
+      await Promise.all(chunks.map(chunk => new Promise((resolve, reject) => {
+        const worker = new Worker(url);
+        worker.onmessage = ev => {
+          const msg = ev.data;
+          if(msg.type === 'progress') {
+            progressDone += msg.done || 0;
+          }
+          if(msg.type === 'done') {
+            results.push(msg.result);
+            worker.terminate();
+            resolve();
+          }
+        };
+        worker.onerror = err => {
+          worker.terminate();
+          reject(err);
+        };
+        worker.postMessage({ task, payload: { ...basePayload, ...chunk } });
+      })));
+
+      URL.revokeObjectURL(url);
+      return results;
+    }
+
+    function mergeMonte(results){
+      const comboCounts = new Map();
       const numberCounts = new Map();
-      for(let i=1;i<=getMaxNum();i++) numberCounts.set(i,0);
-      for(let i=0;i<getMonteIterations();i++){
-        const combo = randomCombo(scoreTable, lotoType==='loto7'?18:20);
-        const key = combo.join('-');
-        counts.set(key, (counts.get(key)||0)+1);
-        combo.forEach(n=>numberCounts.set(n,(numberCounts.get(n)||0)+1));
-      }
+      results.forEach(res=>{
+        res.combos.forEach(([k,c])=>comboCounts.set(k,(comboCounts.get(k)||0)+c));
+        res.numbers.forEach(([n,c])=>numberCounts.set(n,(numberCounts.get(n)||0)+c));
+      });
       return {
-        topCombos:[...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),
+        topCombos:[...comboCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),
         topNumbers:[...numberCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10)
       };
     }
 
-    function geneticSearch(scoreTable){
-      const popSize = getGaPopulation();
-      const gens = getGaGenerations();
-      let population = Array.from({length:popSize},()=>randomCombo(scoreTable,lotoType==='loto7'?22:24));
-      for(let g=0; g<gens; g++){
-        const ranked = population.map(combo=>({combo,score:comboScore(combo,scoreTable)})).sort((a,b)=>b.score-a.score);
-        const elites = ranked.slice(0, Math.max(8, Math.floor(popSize/5))).map(x=>x.combo);
-        const next = [...elites];
-        while(next.length < popSize){
-          const a = elites[Math.floor(Math.random()*elites.length)];
-          const b = elites[Math.floor(Math.random()*elites.length)];
-          let merged = [...new Set([...a.slice(0,Math.ceil(a.length/2)), ...b.slice(Math.floor(b.length/2))])];
-          while(merged.length < getPickCount()){
-            const n = scoreTable[Math.floor(Math.random()*Math.min(scoreTable.length, lotoType==='loto7'?22:24))].number;
-            if(!merged.includes(n)) merged.push(n);
-          }
-          merged = merged.slice(0,getPickCount()).sort((x,y)=>x-y);
-          next.push(merged);
-        }
-        population = next;
-      }
-      const ranked = population.map(combo=>({combo,score:comboScore(combo,scoreTable)})).sort((a,b)=>b.score-a.score);
+    function mergeGa(results){
       const uniq = new Map();
-      ranked.forEach(item=>{ const k=item.combo.join('-'); if(!uniq.has(k)) uniq.set(k,item); });
-      return [...uniq.values()].slice(0,20);
+      results.flat().forEach(item=>{
+        const k = item.combo.join('-');
+        if(!uniq.has(k) || item.score > uniq.get(k).score) uniq.set(k, item);
+      });
+      return [...uniq.values()].sort((a,b)=>b.score-a.score).slice(0,20);
     }
 
-    function buildPortfolio(scoreTable, gaTop){
-      const out = [...gaTop];
-      const seen = new Set(out.map(x=>x.combo.join('-')));
-      while(out.length < getPortfolioSize()){
-        const combo = randomCombo(scoreTable, lotoType==='loto7'?22:24);
-        const key = combo.join('-');
-        if(!seen.has(key)){
-          seen.add(key);
-          out.push({combo, score:comboScore(combo,scoreTable)});
-        }
-      }
-      return out.sort((a,b)=>b.score-a.score).slice(0, getPortfolioSize());
-    }
-
-    function buildHeatmap(scoreTable){
-      const top = scoreTable.slice(0,12).map(x=>x.number);
-      const matrix = Array.from({length:getMaxNum()+1},()=>Array(getMaxNum()+1).fill(0));
-      pastData.forEach(d=>{
-        for(let i=0;i<d.numbers.length;i++) for(let j=i+1;j<d.numbers.length;j++){
-          const a=d.numbers[i], b=d.numbers[j];
-          matrix[a][b]++; matrix[b][a]++;
-        }
+    function mergePortfolio(results, limit){
+      const uniq = new Map();
+      results.flat().forEach(item=>{
+        const k = item.combo.join('-');
+        if(!uniq.has(k) || item.score > uniq.get(k).score) uniq.set(k, item);
       });
-      const vals=[]; top.forEach(a=>top.forEach(b=>vals.push(a===b?0:matrix[a][b])));
-      const max = Math.max(...vals,1);
-      const grid = document.createElement('div');
-      grid.className='grid gap-1';
-      grid.style.gridTemplateColumns = `64px repeat(${top.length}, minmax(0, 1fr))`;
-      const add=(html)=>{ const d=document.createElement('div'); d.innerHTML=html; grid.appendChild(d); };
-      add('<div></div>');
-      top.forEach(n=>add(`<div class="text-xs text-center text-slate-300 font-semibold">${n}</div>`));
-      top.forEach(r=>{
-        add(`<div class="text-xs text-slate-300 font-semibold flex items-center">${r}</div>`);
-        top.forEach(c=>{
-          const v = r===c?0:matrix[r][c];
-          const alpha = v/max;
-          const bg = r===c ? 'rgba(148,163,184,0.18)' : `rgba(99,102,241,${0.08+alpha*0.82})`;
-          add(`<div class="heat rounded-lg border border-white/5 flex items-center justify-center text-[11px] font-semibold ${alpha>0.55?'text-white':'text-slate-200'}" style="background:${bg}">${v}</div>`);
-        })
-      });
-      $('heatmap').innerHTML='';
-      $('heatmap').appendChild(grid);
+      return [...uniq.values()].sort((a,b)=>b.score-a.score).slice(0, limit);
     }
 
     function renderPrediction(pred){
@@ -445,7 +554,7 @@
         const inPred = pred.includes(row.number);
         const card=document.createElement('div');
         card.className=`rounded-2xl border p-3 transition shadow-lg ${inPred ? 'bg-indigo-500/10 border-indigo-400/40' : 'bg-slate-900/60 border-white/10'}`;
-        card.innerHTML=`<div class="flex items-center justify-between mb-2"><div class="text-2xl font-black ${inPred?'text-indigo-300':'text-white'}">${row.number}</div><div class="text-xs px-2 py-1 rounded-full ${inPred?'bg-indigo-400/20 text-indigo-200':'bg-slate-700 text-slate-300'}">${row.score.toFixed(3)}</div></div><div class="text-[11px] text-slate-400 space-y-1"><div>長期 ${row.long.toFixed(2)}</div><div>直近 ${row.recent.toFixed(2)}</div><div>gap ${row.gap.toFixed(2)}</div><div>セット ${row.set.toFixed(2)}</div></div>`;
+        card.innerHTML=`<div class="flex items-center justify-between mb-2"><div class="text-2xl font-black ${inPred?'text-indigo-300':'text-white'}">${row.number}</div><div class="text-xs px-2 py-1 rounded-full ${inPred?'bg-indigo-400/20 text-indigo-200':'bg-slate-700 text-slate-300'}">${row.score.toFixed(3)}</div></div><div class="text-[11px] text-slate-400 space-y-1"><div>長期 ${row.long.toFixed(2)}</div><div>直近 ${row.recent.toFixed(2)}</div><div>gap ${row.gap.toFixed(2)}</div><div>セット ${row.set.toFixed(2)}</div><div>共起 ${row.pair.toFixed(2)}</div></div>`;
         $('score-grid').appendChild(card);
       });
     }
@@ -458,6 +567,29 @@
         row.innerHTML=formatter(item, idx);
         el.appendChild(row);
       });
+    }
+
+    function buildHeatmap(pairMatrix, scoreTable){
+      const top = scoreTable.slice(0,12).map(x=>x.number);
+      const vals=[]; top.forEach(a=>top.forEach(b=>vals.push(a===b?0:pairMatrix[a][b])));
+      const max = Math.max(...vals,1);
+      const grid = document.createElement('div');
+      grid.className='grid gap-1 min-w-[540px]';
+      grid.style.gridTemplateColumns = `64px repeat(${top.length}, minmax(0, 1fr))`;
+      const add=(html)=>{ const d=document.createElement('div'); d.innerHTML=html; grid.appendChild(d); };
+      add('<div></div>');
+      top.forEach(n=>add(`<div class="text-xs text-center text-slate-300 font-semibold">${n}</div>`));
+      top.forEach(r=>{
+        add(`<div class="text-xs text-slate-300 font-semibold flex items-center">${r}</div>`);
+        top.forEach(c=>{
+          const v = r===c?0:pairMatrix[r][c];
+          const alpha = v/max;
+          const bg = r===c ? 'rgba(148,163,184,0.18)' : `rgba(99,102,241,${0.08+alpha*0.82})`;
+          add(`<div class="heat-cell rounded-lg border border-white/5 flex items-center justify-center text-[11px] font-semibold ${alpha>0.55?'text-white':'text-slate-200'}" style="background:${bg}">${v}</div>`);
+        });
+      });
+      $('heatmap').innerHTML='';
+      $('heatmap').appendChild(grid);
     }
 
     function renderCharts(){
@@ -481,43 +613,108 @@
       $('initial-view').classList.add('hidden');
       $('dashboard').classList.remove('hidden');
 
-      setProgress(10,'セット推定');
-      const setRank = estimateSet();
+      setProgress(5,'5%','前処理');
+      const { scoreTable, pairMatrix, setRank } = computeScores();
+      const prediction = buildPrediction(scoreTable);
+      renderPrediction(prediction);
+      renderScoreGrid(scoreTable, prediction);
+      renderCharts();
+      buildHeatmap(pairMatrix, scoreTable);
+      $('summary-text').innerHTML = `<div class="text-white font-semibold mb-2">研究用候補数字</div><div class="text-slate-300">${prediction.join(' - ')}</div>`;
       if(setRank?.length){
         $('set-estimate-badge').textContent = `${setRank[0].name} 優勢`;
         $('set-estimate-detail').textContent = setRank.map(x=>`${x.name}(${x.score.toFixed(3)})`).join(' / ');
       }
-      await tick();
 
-      setProgress(25,'スコア計算');
-      const scoreTable = computeScores();
-      const pred = buildPrediction(scoreTable);
-      renderPrediction(pred);
-      renderScoreGrid(scoreTable, pred);
-      renderCharts();
-      buildHeatmap(scoreTable);
-      $('summary-text').innerHTML = `<div class="text-white font-semibold mb-2">研究用候補数字</div><div class="text-slate-300">${pred.join(' - ')}</div>`;
-      await tick();
+      const topPool = scoreTable.slice(0, lotoType==='loto7' ? 24 : 26).map(x=>x.number);
+      const payloadBase = {
+        maxNum: getMaxNum(),
+        pickCount: getPickCount(),
+        pool: topPool,
+        scoreTable,
+        bands: getBands(),
+        targets: getBandTargets()
+      };
 
-      setProgress(45,'MonteCarlo');
-      const monte = monteCarlo(scoreTable);
+      setProgress(20,'20%','MonteCarlo');
+      const monteIterations = getMonteIterations();
+      const monteResults = await runWorkerPool(
+        'monte',
+        { ...payloadBase },
+        monteIterations,
+        (workerCount) => {
+          const base = Math.floor(monteIterations / workerCount);
+          let rest = monteIterations % workerCount;
+          return Array.from({length:workerCount},()=>{
+            const iterations = base + (rest-- > 0 ? 1 : 0);
+            return { iterations, topN: lotoType==='loto7' ? 18 : 20, progressEvery: Math.max(100, Math.floor(iterations / 25)) };
+          }).filter(x=>x.iterations>0);
+        }
+      );
+      const monte = mergeMonte(monteResults);
       renderList('monte-results', monte.topCombos, (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-amber-400/15 text-amber-200">${item[1]}</div></div><div class="text-lg font-bold text-white">${item[0]}</div>`);
-      await tick();
 
-      setProgress(65,'GA最適化');
-      const gaTop = geneticSearch(scoreTable);
+      setProgress(55,'55%','GA最適化');
+      const gaPopulation = getGaPopulation();
+      const gaGenerations = getGaGenerations();
+      const gaResults = await runWorkerPool(
+        'ga',
+        { ...payloadBase },
+        gaGenerations,
+        (workerCount) => {
+          const basePop = Math.floor(gaPopulation / workerCount);
+          let restPop = gaPopulation % workerCount;
+          return Array.from({length:workerCount},()=>({
+            population: basePop + (restPop-- > 0 ? 1 : 0),
+            generations: gaGenerations,
+            topN: lotoType==='loto7' ? 22 : 24
+          })).filter(x=>x.population>0);
+        }
+      );
+      const gaTop = mergeGa(gaResults);
       renderList('ga-results', gaTop.slice(0,20), (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-fuchsia-400/15 text-fuchsia-200">${item.score.toFixed(3)}</div></div><div class="text-lg font-bold text-white">${item.combo.join(' - ')}</div>`);
-      await tick();
 
-      setProgress(85,'ポートフォリオ生成');
-      const portfolio = buildPortfolio(scoreTable, gaTop);
-      renderList('portfolio-results', portfolio.slice(0,getPortfolioSize()), (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-emerald-400/15 text-emerald-200">${item.score.toFixed(3)}</div></div><div class="text-lg font-bold text-white">${item.combo.join(' - ')}</div>`);
-      await tick();
+      setProgress(80,'80%','ポートフォリオ生成');
+      const portfolioSize = getPortfolioSize();
+      const portfolioResults = await runWorkerPool(
+        'portfolio',
+        { ...payloadBase },
+        portfolioSize,
+        (workerCount) => {
+          const baseCount = Math.floor(portfolioSize / workerCount);
+          let restCount = portfolioSize % workerCount;
+          return Array.from({length:workerCount},()=>({
+            count: baseCount + (restCount-- > 0 ? 1 : 0),
+            maxAttempts: Math.max(1000, Math.floor((baseCount || 1) * 10)),
+            topN: lotoType==='loto7' ? 22 : 24,
+            progressEvery: 25
+          })).filter(x=>x.count>0);
+        }
+      );
+      const portfolio = mergePortfolio(portfolioResults, portfolioSize);
+      renderList('portfolio-results', portfolio, (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-emerald-400/15 text-emerald-200">${item.score.toFixed(3)}</div></div><div class="text-lg font-bold text-white">${item.combo.join(' - ')}</div>`);
 
-      setProgress(100,'完了');
+      lastResult = { prediction, monte, gaTop, portfolio, scoreTable };
+      setProgress(100,'100%','完了');
     }
 
-    function tick(){ return new Promise(r=>setTimeout(r,0)); }
+    function exportCsv(){
+      if(!lastResult) return;
+      const rows = [];
+      rows.push(['type','value1','value2','value3','value4','value5','value6','value7','meta']);
+      rows.push(['prediction', ...lastResult.prediction, 'main']);
+      lastResult.gaTop.forEach((item, idx)=>rows.push([`ga_${idx+1}`, ...item.combo, `score=${item.score.toFixed(3)}`]));
+      lastResult.portfolio.forEach((item, idx)=>rows.push([`portfolio_${idx+1}`, ...item.combo, `score=${item.score.toFixed(3)}`]));
+      lastResult.monte.topCombos.forEach((item, idx)=>rows.push([`monte_${idx+1}`, ...String(item[0]).split('-'), `count=${item[1]}`]));
+      const csv = Papa.unparse(rows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'HyperLoto_V5_Research.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
     function updateUI(){
       const hasData = pastData.length > 0;
@@ -525,12 +722,14 @@
       $('dashboard').classList.toggle('hidden', !hasData);
       if(!hasData){
         $('summary-text').textContent='CSVを読み込むかサンプルデータを生成してください。';
-        setProgress(0,'0%');
+        setProgress(0, '0%', '待機中');
       }
     }
 
+    fillWorkerOptions();
     setButtonStyles();
     updateUI();
   </script>
 </body>
 </html>
+
