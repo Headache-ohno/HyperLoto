@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HyperLoto Research HTML</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', system-ui, sans-serif; }
+    .glass { backdrop-filter: blur(14px); background: rgba(255,255,255,0.08); }
+    .ball { width: 3.25rem; height: 3.25rem; }
+    @media (min-width: 768px) { .ball { width: 4rem; height: 4rem; } }
+    .heat { aspect-ratio: 1/1; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.2),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_26%),linear-gradient(180deg,_#020617,_#0f172a)]">
+  <div class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+    <header class="glass border border-white/10 rounded-3xl shadow-2xl p-5 md:p-7 mb-6">
+      <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-2xl">🧪</div>
+            <div>
+              <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">HyperLoto Research HTML</h1>
+              <p class="text-sm md:text-base text-slate-300">研究用途全部盛りのブラウザ版</p>
+            </div>
+          </div>
+          <p class="text-xs md:text-sm text-slate-400 leading-relaxed max-w-4xl">
+            頻度・直近・gap・セット推定・共起グラフ・MonteCarlo・GA・ポートフォリオ生成をブラウザでまとめて扱います。
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="loto6-button" class="px-4 py-2 rounded-2xl font-semibold bg-slate-700 text-white border border-white/10">ロト6</button>
+          <button id="loto7-button" class="px-4 py-2 rounded-2xl font-semibold bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">ロト7</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 mb-6">
+      <div class="glass border border-white/10 rounded-3xl p-5 md:p-6 shadow-xl">
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">データと研究設定</h2>
+        <div class="flex flex-wrap gap-3 mb-4">
+          <label class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-500 hover:bg-indigo-400 transition text-white font-semibold cursor-pointer">
+            CSVをアップロード
+            <input id="file-upload" type="file" accept=".csv" class="hidden" />
+          </label>
+          <button id="sample-data-button" class="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 transition text-white font-semibold">サンプルデータ</button>
+          <button id="run-button" class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 transition text-slate-950 font-semibold">研究実行</button>
+          <button id="light-button" class="px-4 py-2 rounded-2xl bg-sky-500 hover:bg-sky-400 transition text-slate-950 font-semibold">軽量設定</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4 space-y-4">
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">セット補正</label>
+              <select id="set-selector" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="AUTO">自動推定</option>
+                <option value="NONE">なし</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="H">H</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">直近分析ウィンドウ</label>
+              <select id="recent-window" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="10">10回</option>
+                <option value="20" selected>20回</option>
+                <option value="30">30回</option>
+                <option value="50">50回</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">MonteCarlo回数</label>
+              <select id="monte-iterations" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="1000">1,000</option>
+                <option value="3000">3,000</option>
+                <option value="10000" selected>10,000</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4 space-y-4">
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">GA 個体数</label>
+              <select id="ga-population" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="40">40</option>
+                <option value="80" selected>80</option>
+                <option value="120">120</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">GA 世代数</label>
+              <select id="ga-generations" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="20">20</option>
+                <option value="40" selected>40</option>
+                <option value="60">60</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-slate-300 block mb-2">ポートフォリオ口数</label>
+              <select id="portfolio-size" class="w-full rounded-xl bg-slate-800 border border-white/10 px-3 py-2 text-slate-100">
+                <option value="10">10</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+                <option value="1000">1000</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass border border-white/10 rounded-3xl p-5 md:p-6 shadow-xl">
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">研究サマリー</h2>
+        <div id="predicted-numbers-container" class="flex flex-wrap gap-3 mb-4"></div>
+        <div id="summary-text" class="rounded-2xl bg-slate-900/70 border border-white/10 p-4 text-sm text-slate-300 leading-relaxed mb-4">CSVを読み込むかサンプルデータを生成してください。</div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4"><div class="text-xs text-slate-400">推奨奇偶</div><div id="odd-even-summary" class="text-lg font-bold text-white mt-1">-</div></div>
+          <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4"><div class="text-xs text-slate-400">推奨数字帯</div><div id="band-summary" class="text-lg font-bold text-white mt-1">-</div></div>
+        </div>
+        <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4 mb-4">
+          <div class="flex items-center justify-between mb-2"><div class="text-sm font-semibold text-white">セット候補推定</div><div id="set-estimate-badge" class="text-xs text-indigo-300">未推定</div></div>
+          <div id="set-estimate-detail" class="text-sm text-slate-300">C/D/E/H のどれに近いかを推定します。</div>
+        </div>
+        <div class="rounded-2xl bg-slate-900/70 border border-white/10 p-4">
+          <div class="text-sm font-semibold text-white mb-2">実行状況</div>
+          <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden"><div id="progress-bar" class="h-full w-0 bg-cyan-400 transition-all duration-300"></div></div>
+          <div id="progress-text" class="mt-2 text-xs text-slate-400">0%</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="initial-view" class="glass border border-white/10 rounded-3xl shadow-xl p-8 md:p-12 text-center mb-6">
+      <div class="text-5xl mb-4">📊</div>
+      <h3 class="text-2xl font-bold text-white mb-2">HyperLoto Research HTML</h3>
+      <p class="text-slate-400">研究実行で統計と最適化をまとめて回します。</p>
+    </div>
+
+    <div id="dashboard" class="hidden space-y-6">
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><h3 class="text-lg md:text-xl font-bold text-white mb-3">全期間 出現頻度 TOP10</h3><div class="h-64"><canvas id="frequency-chart"></canvas></div></div>
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><h3 class="text-lg md:text-xl font-bold text-white mb-3">直近トレンド TOP10</h3><div class="h-64"><canvas id="recent-chart"></canvas></div></div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold text-white">MonteCarlo 上位</h3></div><div id="monte-results" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold text-white">GA 上位</h3></div><div id="ga-results" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold text-white">ポートフォリオ</h3></div><div id="portfolio-results" class="space-y-2 max-h-80 overflow-y-auto"></div></div>
+        <div class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><div class="flex items-center justify-between mb-3"><h3 class="text-lg font-bold text-white">共起ヒートマップ</h3></div><div id="heatmap" class="overflow-auto"></div></div>
+      </section>
+
+      <section class="glass border border-white/10 rounded-3xl p-5 shadow-xl"><div class="flex items-center justify-between mb-3"><h3 class="text-lg md:text-xl font-bold text-white">全数字スコア詳細</h3></div><div id="score-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3"></div></section>
+    </div>
+  </div>
+
+  <script>
+    const SET_BIAS = {
+      C: {4:26,9:21,35:21,13:20,8:20,34:20,28:19,10:18,2:18,6:17,26:17,36:17,11:17,23:16,27:15,18:15,14:15,24:15},
+      D: {8:23,21:21,27:21,13:21,9:20,36:20,28:20,30:20,23:19,4:19,31:18,14:18,24:17,1:17,2:16,18:16,15:16},
+      E: {32:23,17:22,34:22,36:22,1:21,11:21,19:21,30:20,24:19,5:18,33:18,10:18,6:18,25:17,31:17,7:17,37:17},
+      H: {12:19,32:19,20:18,28:18,18:18,37:18,22:17,9:17,15:16,27:16,4:15,29:15,10:15,26:14,24:14,35:14,5:14}
+    };
+
+    let lotoType = 'loto7';
+    let pastData = [];
+    let charts = {};
+
+    const $ = id => document.getElementById(id);
+
+    $('loto6-button').onclick = () => switchLotoType('loto6');
+    $('loto7-button').onclick = () => switchLotoType('loto7');
+    $('file-upload').addEventListener('change', handleUpload);
+    $('sample-data-button').onclick = sampleData;
+    $('run-button').onclick = runResearch;
+    $('light-button').onclick = applyLight;
+
+    function setProgress(p, text) {
+      $('progress-bar').style.width = `${Math.max(0, Math.min(100, p))}%`;
+      $('progress-text').textContent = text || `${p}%`;
+    }
+
+    function switchLotoType(type) {
+      lotoType = type;
+      pastData = [];
+      setButtonStyles();
+      updateUI();
+    }
+
+    function setButtonStyles() {
+      $('loto6-button').className = `px-4 py-2 rounded-2xl font-semibold ${lotoType==='loto6' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-700 text-white border border-white/10'}`;
+      $('loto7-button').className = `px-4 py-2 rounded-2xl font-semibold ${lotoType==='loto7' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-700 text-white border border-white/10'}`;
+    }
+
+    function getMaxNum(){ return lotoType==='loto6' ? 43 : 37; }
+    function getPickCount(){ return lotoType==='loto6' ? 6 : 7; }
+    function getBands(){ return lotoType==='loto6' ? [{label:'1-11',min:1,max:11},{label:'12-22',min:12,max:22},{label:'23-33',min:23,max:33},{label:'34-43',min:34,max:43}] : [{label:'1-9',min:1,max:9},{label:'10-18',min:10,max:18},{label:'19-27',min:19,max:27},{label:'28-37',min:28,max:37}] }
+    function getBandTargets(){ return lotoType==='loto6' ? [2,2,1,1] : [2,2,2,1]; }
+    function getRecentWindow(){ return Number($('recent-window').value); }
+    function getMonteIterations(){ return Number($('monte-iterations').value); }
+    function getGaPopulation(){ return Number($('ga-population').value); }
+    function getGaGenerations(){ return Number($('ga-generations').value); }
+    function getPortfolioSize(){ return Number($('portfolio-size').value); }
+
+    function applyLight(){
+      $('monte-iterations').value = '3000';
+      $('ga-population').value = '40';
+      $('ga-generations').value = '20';
+      $('portfolio-size').value = '50';
+      setProgress(0, '軽量設定');
+    }
+
+    function normalize(arr){
+      const min = Math.min(...arr), max = Math.max(...arr);
+      if (!isFinite(min) || !isFinite(max) || max===min) return arr.map(()=>0.5);
+      return arr.map(v=>(v-min)/(max-min));
+    }
+
+    function handleUpload(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      Papa.parse(file, {
+        encoding: 'Shift_JIS',
+        complete: r => {
+          pastData = parseRows(r.data);
+          updateUI();
+        }
+      });
+    }
+
+    function parseRows(rows){
+      const out = [];
+      const pick = getPickCount();
+      for(let i=1;i<rows.length;i++){
+        const row = rows[i];
+        if(!row || row.length < 2 + pick) continue;
+        const drawNumber = parseInt(row[0], 10);
+        const date = row[1];
+        if(!drawNumber || !date) continue;
+        const nums = [...new Set(row.slice(2).map(x=>parseInt(x,10)).filter(n=>!Number.isNaN(n) && n>=1 && n<=getMaxNum()))].sort((a,b)=>a-b);
+        if(nums.length === pick) out.push({ drawNumber, date, numbers: nums });
+      }
+      return out.reverse();
+    }
+
+    function sampleData(){
+      const draws = [];
+      const hot = lotoType==='loto7' ? [4,8,9,13,18,27,28,32,34,36] : [3,6,10,17,21,24,31,33,37,41];
+      for(let i=0;i<220;i++){
+        const s = new Set();
+        while(s.size < getPickCount()){
+          let n = Math.floor(Math.random()*getMaxNum())+1;
+          if(Math.random()<0.22) n = hot[Math.floor(Math.random()*hot.length)];
+          s.add(n);
+        }
+        draws.push({ drawNumber: 2500-i, date: new Date(Date.now()-i*7*24*3600*1000).toLocaleDateString('ja-JP'), numbers:[...s].sort((a,b)=>a-b) });
+      }
+      pastData = draws;
+      updateUI();
+    }
+
+    function frequencyCounts(data){
+      const out = Array.from({length:getMaxNum()},(_,i)=>({number:i+1,count:0}));
+      data.forEach(d=>d.numbers.forEach(n=>out[n-1].count++));
+      return out;
+    }
+
+    function estimateSet(){
+      if(lotoType!=='loto7') return null;
+      const freq = frequencyCounts(pastData).sort((a,b)=>b.count-a.count);
+      const rank = new Map(freq.map((x,i)=>[x.number,i+1]));
+      const scores = Object.entries(SET_BIAS).map(([name,bias])=>{
+        let s = 0; let c = 0;
+        Object.entries(bias).forEach(([num,val])=>{ s += val / ((rank.get(Number(num))||37) + 4); c++; });
+        return {name, score:s/c};
+      }).sort((a,b)=>b.score-a.score);
+      return scores;
+    }
+
+    function computeScores(){
+      const freq = frequencyCounts(pastData);
+      const recent = frequencyCounts(pastData.slice(0,getRecentWindow()));
+      const gaps = Array.from({length:getMaxNum()},(_,i)=>{
+        const idx = pastData.findIndex(d=>d.numbers.includes(i+1));
+        return idx===-1 ? pastData.length+10 : idx;
+      });
+      const setRank = estimateSet();
+      const selectedSet = $('set-selector').value === 'AUTO' ? (setRank?.[0]?.name || 'NONE') : $('set-selector').value;
+      const setVals = Array.from({length:getMaxNum()},(_,i)=> selectedSet !== 'NONE' && SET_BIAS[selectedSet] ? (SET_BIAS[selectedSet][i+1] || 0) : 0);
+
+      const longNorm = normalize(freq.map(x=>x.count));
+      const recentNorm = normalize(recent.map(x=>x.count));
+      const gapNorm = normalize(gaps);
+      const setNorm = normalize(setVals);
+
+      return Array.from({length:getMaxNum()},(_,i)=>({
+        number:i+1,
+        score: longNorm[i]*0.34 + recentNorm[i]*0.24 + gapNorm[i]*0.18 + setNorm[i]*0.10,
+        long: longNorm[i],
+        recent: recentNorm[i],
+        gap: gapNorm[i],
+        set: setNorm[i]
+      })).sort((a,b)=>b.score-a.score);
+    }
+
+    function buildPrediction(scoreTable){
+      const selected = [];
+      const used = new Set();
+      getBands().forEach((band, idx)=>{
+        const need = getBandTargets()[idx];
+        const cands = scoreTable.filter(x=>x.number>=band.min && x.number<=band.max).slice(0,12);
+        cands.slice(0,need).forEach(c=>{ if(!used.has(c.number)){ used.add(c.number); selected.push(c.number); } });
+      });
+      scoreTable.forEach(r=>{ if(selected.length<getPickCount() && !used.has(r.number)){ used.add(r.number); selected.push(r.number); } });
+      return selected.sort((a,b)=>a-b);
+    }
+
+    function comboScore(combo, scoreTable){
+      const map = new Map(scoreTable.map(x=>[x.number,x.score]));
+      let s = combo.reduce((a,n)=>a+(map.get(n)||0),0);
+      const odd = combo.filter(n=>n%2===1).length;
+      const even = combo.length-odd;
+      if(Math.abs(odd-even)>3) s -= 0.25;
+      getBands().forEach((b,idx)=>{ s -= Math.abs(combo.filter(n=>n>=b.min&&n<=b.max).length - getBandTargets()[idx])*0.08; });
+      return s;
+    }
+
+    function randomCombo(scoreTable, topN){
+      const pool = scoreTable.slice(0, topN).map(x=>x.number);
+      const s = new Set();
+      while(s.size<getPickCount()) s.add(pool[Math.floor(Math.random()*pool.length)]);
+      return [...s].sort((a,b)=>a-b);
+    }
+
+    function monteCarlo(scoreTable){
+      const counts = new Map();
+      const numberCounts = new Map();
+      for(let i=1;i<=getMaxNum();i++) numberCounts.set(i,0);
+      for(let i=0;i<getMonteIterations();i++){
+        const combo = randomCombo(scoreTable, lotoType==='loto7'?18:20);
+        const key = combo.join('-');
+        counts.set(key, (counts.get(key)||0)+1);
+        combo.forEach(n=>numberCounts.set(n,(numberCounts.get(n)||0)+1));
+      }
+      return {
+        topCombos:[...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10),
+        topNumbers:[...numberCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10)
+      };
+    }
+
+    function geneticSearch(scoreTable){
+      const popSize = getGaPopulation();
+      const gens = getGaGenerations();
+      let population = Array.from({length:popSize},()=>randomCombo(scoreTable,lotoType==='loto7'?22:24));
+      for(let g=0; g<gens; g++){
+        const ranked = population.map(combo=>({combo,score:comboScore(combo,scoreTable)})).sort((a,b)=>b.score-a.score);
+        const elites = ranked.slice(0, Math.max(8, Math.floor(popSize/5))).map(x=>x.combo);
+        const next = [...elites];
+        while(next.length < popSize){
+          const a = elites[Math.floor(Math.random()*elites.length)];
+          const b = elites[Math.floor(Math.random()*elites.length)];
+          let merged = [...new Set([...a.slice(0,Math.ceil(a.length/2)), ...b.slice(Math.floor(b.length/2))])];
+          while(merged.length < getPickCount()){
+            const n = scoreTable[Math.floor(Math.random()*Math.min(scoreTable.length, lotoType==='loto7'?22:24))].number;
+            if(!merged.includes(n)) merged.push(n);
+          }
+          merged = merged.slice(0,getPickCount()).sort((x,y)=>x-y);
+          next.push(merged);
+        }
+        population = next;
+      }
+      const ranked = population.map(combo=>({combo,score:comboScore(combo,scoreTable)})).sort((a,b)=>b.score-a.score);
+      const uniq = new Map();
+      ranked.forEach(item=>{ const k=item.combo.join('-'); if(!uniq.has(k)) uniq.set(k,item); });
+      return [...uniq.values()].slice(0,20);
+    }
+
+    function buildPortfolio(scoreTable, gaTop){
+      const out = [...gaTop];
+      const seen = new Set(out.map(x=>x.combo.join('-')));
+      while(out.length < getPortfolioSize()){
+        const combo = randomCombo(scoreTable, lotoType==='loto7'?22:24);
+        const key = combo.join('-');
+        if(!seen.has(key)){
+          seen.add(key);
+          out.push({combo, score:comboScore(combo,scoreTable)});
+        }
+      }
+      return out.sort((a,b)=>b.score-a.score).slice(0, getPortfolioSize());
+    }
+
+    function buildHeatmap(scoreTable){
+      const top = scoreTable.slice(0,12).map(x=>x.number);
+      const matrix = Array.from({length:getMaxNum()+1},()=>Array(getMaxNum()+1).fill(0));
+      pastData.forEach(d=>{
+        for(let i=0;i<d.numbers.length;i++) for(let j=i+1;j<d.numbers.length;j++){
+          const a=d.numbers[i], b=d.numbers[j];
+          matrix[a][b]++; matrix[b][a]++;
+        }
+      });
+      const vals=[]; top.forEach(a=>top.forEach(b=>vals.push(a===b?0:matrix[a][b])));
+      const max = Math.max(...vals,1);
+      const grid = document.createElement('div');
+      grid.className='grid gap-1';
+      grid.style.gridTemplateColumns = `64px repeat(${top.length}, minmax(0, 1fr))`;
+      const add=(html)=>{ const d=document.createElement('div'); d.innerHTML=html; grid.appendChild(d); };
+      add('<div></div>');
+      top.forEach(n=>add(`<div class="text-xs text-center text-slate-300 font-semibold">${n}</div>`));
+      top.forEach(r=>{
+        add(`<div class="text-xs text-slate-300 font-semibold flex items-center">${r}</div>`);
+        top.forEach(c=>{
+          const v = r===c?0:matrix[r][c];
+          const alpha = v/max;
+          const bg = r===c ? 'rgba(148,163,184,0.18)' : `rgba(99,102,241,${0.08+alpha*0.82})`;
+          add(`<div class="heat rounded-lg border border-white/5 flex items-center justify-center text-[11px] font-semibold ${alpha>0.55?'text-white':'text-slate-200'}" style="background:${bg}">${v}</div>`);
+        })
+      });
+      $('heatmap').innerHTML='';
+      $('heatmap').appendChild(grid);
+    }
+
+    function renderPrediction(pred){
+      $('predicted-numbers-container').innerHTML='';
+      pred.forEach(n=>{
+        const d = document.createElement('div');
+        d.className='ball rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 shadow-xl shadow-indigo-500/25 border border-white/20 flex items-center justify-center text-xl md:text-2xl font-black text-white';
+        d.textContent=n;
+        $('predicted-numbers-container').appendChild(d);
+      });
+      const odd = pred.filter(n=>n%2===1).length;
+      $('odd-even-summary').textContent = `${odd} : ${pred.length-odd}`;
+      $('band-summary').textContent = getBands().map(b=>pred.filter(n=>n>=b.min&&n<=b.max).length).join(' - ');
+    }
+
+    function renderScoreGrid(scoreTable, pred){
+      $('score-grid').innerHTML='';
+      [...scoreTable].sort((a,b)=>a.number-b.number).forEach(row=>{
+        const inPred = pred.includes(row.number);
+        const card=document.createElement('div');
+        card.className=`rounded-2xl border p-3 transition shadow-lg ${inPred ? 'bg-indigo-500/10 border-indigo-400/40' : 'bg-slate-900/60 border-white/10'}`;
+        card.innerHTML=`<div class="flex items-center justify-between mb-2"><div class="text-2xl font-black ${inPred?'text-indigo-300':'text-white'}">${row.number}</div><div class="text-xs px-2 py-1 rounded-full ${inPred?'bg-indigo-400/20 text-indigo-200':'bg-slate-700 text-slate-300'}">${row.score.toFixed(3)}</div></div><div class="text-[11px] text-slate-400 space-y-1"><div>長期 ${row.long.toFixed(2)}</div><div>直近 ${row.recent.toFixed(2)}</div><div>gap ${row.gap.toFixed(2)}</div><div>セット ${row.set.toFixed(2)}</div></div>`;
+        $('score-grid').appendChild(card);
+      });
+    }
+
+    function renderList(targetId, items, formatter){
+      const el = $(targetId); el.innerHTML='';
+      items.forEach((item, idx)=>{
+        const row = document.createElement('div');
+        row.className='rounded-2xl bg-slate-900/70 border border-white/10 p-4';
+        row.innerHTML=formatter(item, idx);
+        el.appendChild(row);
+      });
+    }
+
+    function renderCharts(){
+      const freq = frequencyCounts(pastData).sort((a,b)=>b.count-a.count);
+      const recent = frequencyCounts(pastData.slice(0,getRecentWindow())).sort((a,b)=>b.count-a.count);
+      createOrReplaceChart('freq','frequency-chart',{type:'bar',data:{labels:freq.slice(0,10).map(x=>x.number),datasets:[{label:'出現回数',data:freq.slice(0,10).map(x=>x.count),backgroundColor:'rgba(99,102,241,0.85)',borderRadius:12}]},options:chartOptions()});
+      createOrReplaceChart('recent','recent-chart',{type:'bar',data:{labels:recent.slice(0,10).map(x=>x.number),datasets:[{label:'直近',data:recent.slice(0,10).map(x=>x.count),backgroundColor:'rgba(16,185,129,0.85)',borderRadius:12}]},options:chartOptions()});
+    }
+
+    function createOrReplaceChart(key, id, config){
+      if(charts[key]) charts[key].destroy();
+      charts[key] = new Chart($(id), config);
+    }
+
+    function chartOptions(){
+      return { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#cbd5e1' } } }, scales:{ x:{ ticks:{ color:'#94a3b8' }, grid:{ color:'rgba(148,163,184,0.1)' } }, y:{ ticks:{ color:'#94a3b8' }, grid:{ color:'rgba(148,163,184,0.1)' } } } };
+    }
+
+    async function runResearch(){
+      if(!pastData.length) return;
+      $('initial-view').classList.add('hidden');
+      $('dashboard').classList.remove('hidden');
+
+      setProgress(10,'セット推定');
+      const setRank = estimateSet();
+      if(setRank?.length){
+        $('set-estimate-badge').textContent = `${setRank[0].name} 優勢`;
+        $('set-estimate-detail').textContent = setRank.map(x=>`${x.name}(${x.score.toFixed(3)})`).join(' / ');
+      }
+      await tick();
+
+      setProgress(25,'スコア計算');
+      const scoreTable = computeScores();
+      const pred = buildPrediction(scoreTable);
+      renderPrediction(pred);
+      renderScoreGrid(scoreTable, pred);
+      renderCharts();
+      buildHeatmap(scoreTable);
+      $('summary-text').innerHTML = `<div class="text-white font-semibold mb-2">研究用候補数字</div><div class="text-slate-300">${pred.join(' - ')}</div>`;
+      await tick();
+
+      setProgress(45,'MonteCarlo');
+      const monte = monteCarlo(scoreTable);
+      renderList('monte-results', monte.topCombos, (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-amber-400/15 text-amber-200">${item[1]}</div></div><div class="text-lg font-bold text-white">${item[0]}</div>`);
+      await tick();
+
+      setProgress(65,'GA最適化');
+      const gaTop = geneticSearch(scoreTable);
+      renderList('ga-results', gaTop.slice(0,20), (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-fuchsia-400/15 text-fuchsia-200">${item.score.toFixed(3)}</div></div><div class="text-lg font-bold text-white">${item.combo.join(' - ')}</div>`);
+      await tick();
+
+      setProgress(85,'ポートフォリオ生成');
+      const portfolio = buildPortfolio(scoreTable, gaTop);
+      renderList('portfolio-results', portfolio.slice(0,getPortfolioSize()), (item, idx)=>`<div class="flex items-center justify-between mb-2"><div class="text-sm text-slate-400">#${idx+1}</div><div class="text-xs px-2 py-1 rounded-full bg-emerald-400/15 text-emerald-200">${item.score.toFixed(3)}</div></div><div class="text-lg font-bold text-white">${item.combo.join(' - ')}</div>`);
+      await tick();
+
+      setProgress(100,'完了');
+    }
+
+    function tick(){ return new Promise(r=>setTimeout(r,0)); }
+
+    function updateUI(){
+      const hasData = pastData.length > 0;
+      $('initial-view').classList.toggle('hidden', hasData);
+      $('dashboard').classList.toggle('hidden', !hasData);
+      if(!hasData){
+        $('summary-text').textContent='CSVを読み込むかサンプルデータを生成してください。';
+        setProgress(0,'0%');
+      }
+    }
+
+    setButtonStyles();
+    updateUI();
+  </script>
+</body>
+</html>
